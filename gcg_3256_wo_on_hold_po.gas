@@ -1,0 +1,133 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.bChk.Declare(Boolean)
+V.Local.sJob.Declare(String)
+V.Local.sSuffix.Declare(String)
+V.Local.sSql.Declare(String)
+
+F.ODBC.Connection!con.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+F.Intrinsic.Control.If(V.Caller.Hook,=,16660)
+	F.Intrinsic.Control.If(V.Passed.000030,=,"Y")
+		F.Intrinsic.Control.CallSub(Flag_op,"sJob",V.Passed.000003.Trim,"sSuffix",V.Passed.000004.Trim)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.Control.CallSub(Unflag_op,"sJob",V.Passed.000003.Trim,"sSuffix",V.Passed.000004.Trim)
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.Else
+	V.Local.sJob.Set(V.Passed.009000.Trim)
+	V.Local.sSuffix.Set(V.Passed.009001.Trim)
+	F.Intrinsic.Control.DoUntil(V.Local.bChk,=,False)
+		F.Intrinsic.Task.IsProgramRunning(V.Caller.PID,V.Local.bChk)
+	F.Intrinsic.Control.Loop
+	F.Intrinsic.String.Concat("Select FLAG_HOLD from JOB_HEADER where JOB = '",V.Local.sJob,"' and SUFFIX = '",V.Local.sSuffix,"'",V.Local.sSql)
+	F.ODBC.Connection!con.OpenLocalRecordsetRO("rst",V.Local.sSql)
+	F.Intrinsic.Control.If(V.ODBC.con!rst.EOF,=,True)
+		F.ODBC.con!rst.Close
+		F.Intrinsic.Control.CallSub(Unload)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.Control.If(V.ODBC.con!rst.FieldValTrim!FLAG_HOLD,=,"Y")
+			F.ODBC.con!rst.Close
+			F.Intrinsic.Control.CallSub(Flag_op,"sJob",V.Local.sJob,"sSuffix",V.Local.sSuffix)
+		F.Intrinsic.Control.Else
+			F.ODBC.con!rst.Close
+			F.Intrinsic.Control.CallSub(Unflag_op,"sJob",V.Local.sJob,"sSuffix",V.Local.sSuffix)
+		F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_WO_On_Hold_PO.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(Unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Main.End
+
+Program.Sub.Unload.Start
+F.ODBC.Connection!con.Close
+F.Intrinsic.Control.End
+
+Program.Sub.Unload.End
+
+Program.Sub.Flag_Op.Start
+F.Intrinsic.Control.SetErrorHandler("Flag_Op_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.sSql.Declare(String)
+
+F.Intrinsic.String.Concat("Select JOB, SUFFIX, HOLD_PO from JOB_OPERATIONS where JOB = '",V.Args.sJob,"' and SUFFIX = '",V.Args.sSuffix,"' and LMO = 'M'",V.Local.sSql)
+F.ODBC.Connection!con.OpenLocalRecordsetRW("rst",V.Local.sSql)
+F.Intrinsic.Control.DoUntil(V.ODBC.con!rst.EOF,=,True)
+	F.ODBC.con!rst.Set!HOLD_PO("Y")
+	F.ODBC.con!rst.Update
+	F.ODBC.con!rst.MoveNext
+F.Intrinsic.Control.Loop
+F.ODBC.con!rst.Close
+F.Intrinsic.Control.CallSub(Unload)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Flag_Op_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_WO_On_Hold_PO.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(Unload)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Flag_Op.End
+
+Program.Sub.UnFlag_Op.Start
+F.Intrinsic.Control.SetErrorHandler("UnFlag_Op_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.sSql.Declare(String)
+
+F.Intrinsic.String.Concat("Select JOB, SUFFIX, HOLD_PO from JOB_OPERATIONS where JOB = '",V.Args.sJob,"' and SUFFIX = '",V.Args.sSuffix,"' and LMO = 'M'",V.Local.sSql)
+F.ODBC.Connection!con.OpenLocalRecordsetRW("rst",V.Local.sSql)
+F.Intrinsic.Control.DoUntil(V.ODBC.con!rst.EOF,=,True)
+	F.ODBC.con!rst.Set!HOLD_PO("N")
+	F.ODBC.con!rst.Update
+	F.ODBC.con!rst.MoveNext
+F.Intrinsic.Control.Loop
+F.ODBC.con!rst.Close
+F.Intrinsic.Control.CallSub(Unload)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("UnFlag_Op_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_WO_On_Hold_PO.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.CallSub(Unload)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.UnFlag_Op.End
+
+Program.Sub.Comments.Start
+${$0$}$GCG_WO_On_Hold_PO$}$MLA$}$2/3/2012
+${$1$}$$}$$}$2$}$16660$}$Work Order Change Hook$}$2/29/2012 5:12:34 PM$}$(Program: JB0010GI; Screen: JBS0010  )
+
+${$1$}$$}$$}$1$}$16800$}$JBS0011-OK-BTN-POST-HOOK (WO LINES MAINT)$}$2/8/2012 2:48:34 PM$}$(Program: JB0011GI; Screen: JBS0011)
+
+${$3$}$0$}$$}$-1$}$-1$}$$}$1/1/1900$}$MLA
+Quote: 2956
+Verantis Corp.
+
+Program to flag all material lines on work order on PO hold if work order hold flag is set on work order header.
+Program.Sub.Comments.End
+
